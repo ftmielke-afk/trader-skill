@@ -1,67 +1,76 @@
 ---
 name: trader-analyst
 description: >-
-  The Earnings Analyst. Reads a company's reported numbers straight from SEC
-  EDGAR (XBRL company facts from its 10-Qs and 10-Ks, plus the latest earnings
-  8-K and its press release) and sums up what changed: revenue, gross,
-  operating and net margins, net income and diluted EPS, quarter by quarter,
-  each against the same quarter a year earlier, with the trailing twelve
-  months. Writes a metrics file the screener reads. Use when the user says
-  "how did Apple's earnings look", "analyze the earnings", "what changed this
-  quarter", "is revenue growing", "check the 10-Q", "compare margins", or
-  "run the analyst on my holdings".
-argument-hint: "[tickers]"
+  Der Quartalszahlen-Analyst. Liest die gemeldeten Zahlen eines Unternehmens
+  direkt aus SEC EDGAR (XBRL Company Facts aus seinen 10-Qs und 10-Ks, dazu
+  das neueste 8-K mit den Quartalsergebnissen und seine Pressemitteilung) und
+  fasst zusammen, was sich geändert hat: Umsatz, Brutto-, operative und
+  Nettomarge, Nettogewinn und verwässertes EPS, Quartal für Quartal, jeweils
+  gegen dasselbe Quartal ein Jahr zuvor, mit den letzten zwölf Monaten.
+  Schreibt eine Kennzahlendatei, die der Screener liest. Verwenden, wenn der
+  Nutzer sagt „wie waren Apples Zahlen“, „analysiere die Quartalszahlen“, „was
+  hat sich dieses Quartal geändert“, „wächst der Umsatz“, „prüf das 10-Q“,
+  „vergleich die Margen“ oder „lass den Analysten über meine Bestände laufen“.
+argument-hint: "[Ticker]"
 ---
 
 # trader-analyst
 
-Earnings season moves stocks, and the press release is written to put the
-best number first. This skill reads the numbers the company actually filed
-with the SEC, lines them up quarter by quarter, and says plainly what changed.
+**Sprache:** Antworte auf Deutsch. Die Tools geben Englisch aus; gib ihre
+Ergebnisse auf Deutsch wieder und lass Ticker, Befehle und Dateinamen
+unverändert.
 
-Tool in this folder (standard library Python, no keys):
+Die Berichtssaison bewegt Aktien, und die Pressemitteilung ist so geschrieben,
+dass die beste Zahl vorne steht. Dieser Skill liest die Zahlen, die das
+Unternehmen tatsächlich bei der SEC eingereicht hat, stellt sie Quartal für
+Quartal nebeneinander und sagt klar, was sich geändert hat.
+
+Tool in diesem Ordner (Python mit Standardbibliothek, keine Schlüssel):
 
 ```bash
 python3 "${CLAUDE_SKILL_DIR}/facts.py" --help
 ```
 
-It needs the SEC User-Agent (`sec_user_agent` in `trader/config.json`, or
-`SEC_USER_AGENT`): "Your Name you@example.com" with the user's real name and
-email. It refuses to call SEC without one.
+Es braucht den SEC-User-Agent (`sec_user_agent` in `trader/config.json` oder
+`SEC_USER_AGENT`): „Dein Name du@example.com“ mit dem echten Namen und der
+echten E-Mail des Nutzers. Ohne ihn ruft es die SEC nicht auf.
 
-## What it reads and writes
+## Was er liest und schreibt
 
-- Reads `https://data.sec.gov/api/xbrl/companyfacts/CIK##########.json` (every
-  number the company has tagged in its filings), the company's submissions
-  list (for the newest 10-Q or 10-K and the newest 8-K with item 2.02,
-  "Results of Operations") and that 8-K's folder to find the press release
-  (the EX-99.1 exhibit).
-- Writes `trader/metrics.json` with `--metrics`: one row per company (TTM
-  revenue, net income and diluted EPS, the latest margins and growth) for
-  `/trader-screener`. `metrics.example.json` in this folder is a real run
-  for AAPL, AXP, GOOGL, KO and BAC on 2026-10-13.
+- Liest `https://data.sec.gov/api/xbrl/companyfacts/CIK##########.json` (jede
+  Zahl, die das Unternehmen in seinen Meldungen ausgezeichnet hat), die
+  Einreichungsliste des Unternehmens (für das neueste 10-Q oder 10-K und das
+  neueste 8-K mit Punkt 2.02, „Results of Operations“) und den Ordner dieses
+  8-K, um die Pressemitteilung zu finden (die Anlage EX-99.1).
+- Schreibt mit `--metrics` die Datei `trader/metrics.json`: eine Zeile pro
+  Unternehmen (Umsatz, Nettogewinn und verwässertes EPS der letzten zwölf
+  Monate, die neuesten Margen und das Wachstum) für `/trader-screener`.
+  `metrics.example.json` in diesem Ordner ist ein echter Lauf für AAPL, AXP,
+  GOOGL, KO und BAC am 13.10.2026.
 
-## The rules
+## Die Regeln
 
-- **Filed numbers first.** The table comes from XBRL facts the company filed.
-  Use the press release for context (guidance, segment colour), and say which
-  numbers came from where.
-- **Compare like with like.** Growth is against the same quarter a year
-  earlier. Quarter-on-quarter changes are shown but many businesses are
-  seasonal (Apple's December quarter is always its biggest).
-- **Say what is derived.** Companies do not file a Q4 10-Q. The fourth
-  quarter is the 10-K year minus the three quarters inside it and is marked
-  "derived"; derived EPS is approximate.
-- **Say when the data lags.** SEC's facts API can trail a filing. When the
-  newest 10-Q is later than the newest quarter in the facts, the tool prints a
-  NOTE with the link: read the 10-Q itself before summarising.
-- **Flag one-offs.** When net income is above operating income, gains outside
-  the business (investment marks, tax items) are inside it. The tool says so.
-  Banks and insurers have no gross margin: blank, not zero.
+- **Eingereichte Zahlen zuerst.** Die Tabelle stammt aus XBRL-Fakten, die das
+  Unternehmen eingereicht hat. Nutze die Pressemitteilung für Zusammenhang
+  (Ausblick, Details zu Segmenten) und sag, welche Zahl woher stammt.
+- **Vergleiche Gleiches mit Gleichem.** Wachstum wird gegen dasselbe Quartal
+  ein Jahr zuvor gemessen. Veränderungen zum Vorquartal werden gezeigt, aber
+  viele Geschäfte sind saisonal (Apples Dezemberquartal ist immer das größte).
+- **Sag, was abgeleitet ist.** Unternehmen reichen kein 10-Q für Q4 ein. Das
+  vierte Quartal ist das 10-K-Jahr minus die drei Quartale darin und wird als
+  „derived“ (abgeleitet) markiert; abgeleitetes EPS ist ungefähr.
+- **Sag, wenn die Daten hinterherhinken.** Die Facts-API der SEC kann einer
+  Meldung nachlaufen. Ist das neueste 10-Q jünger als das neueste Quartal in
+  den Fakten, gibt das Tool einen NOTE-Hinweis mit Link aus: Lies das 10-Q
+  selbst, bevor du zusammenfasst.
+- **Markiere Einmaleffekte.** Liegt der Nettogewinn über dem operativen
+  Ergebnis, stecken Gewinne außerhalb des Geschäfts darin (Bewertungen von
+  Beteiligungen, Steuerposten). Das Tool sagt das. Banken und Versicherer
+  haben keine Bruttomarge: leer, nicht null.
 
-## Steps
+## Schritte
 
-1. Run it for the companies in question (or every ticker in
+1. Führ es für die fraglichen Unternehmen aus (oder für jeden Ticker in
    `trader/targets.json`):
 
    ```bash
@@ -69,36 +78,39 @@ email. It refuses to call SEC without one.
    python3 "${CLAUDE_SKILL_DIR}/facts.py" AAPL AXP GOOGL KO BAC --metrics trader/metrics.json
    ```
 
-   `--quarters 8` shows two years, `--json` everything machine-readable,
-   `--cik` a company without a ticker.
-2. Open the latest earnings press release (the EX-99 link) and the 10-Q when
-   the numbers need context, and read them.
-3. Write the summary: one line on the quarter (revenue, EPS, growth), one on
-   margins, one on anything unusual (a one-off, a derived quarter, data that
-   lags), and the links. Plain words, real numbers, no adjectives the numbers
-   do not support.
+   `--quarters 8` zeigt zwei Jahre, `--json` alles maschinenlesbar,
+   `--cik` ein Unternehmen ohne Ticker.
+2. Öffne die neueste Pressemitteilung zu den Quartalszahlen (den EX-99-Link)
+   und das 10-Q, wenn die Zahlen Zusammenhang brauchen, und lies sie.
+3. Schreib die Zusammenfassung: eine Zeile zum Quartal (Umsatz, EPS,
+   Wachstum), eine zu den Margen, eine zu allem Ungewöhnlichen (ein
+   Einmaleffekt, ein abgeleitetes Quartal, nachlaufende Daten) und die Links.
+   Einfache Worte, echte Zahlen, keine Adjektive, die die Zahlen nicht
+   hergeben.
 
-## Example: the reel's top holding
+## Beispiel: die größte Position aus dem Beispiellauf
 
-`facts.py AAPL` (2026-10-13): quarter ending 2026-06-27 (fiscal Q3 2026),
-revenue $109.42B, +16.4% against a year earlier, net income $29.79B (+27.1%),
-diluted EPS $2.02 (+28.7%); gross margin 50.1% (+0.8 points on the quarter
-before); last four quarters $466.8B revenue and $8.71 EPS. Press release:
-the EX-99.1 of the 8-K filed 2026-07-30. For Coca-Cola the tool notes that
-SEC's facts stop at 2026-04-03 while the 10-Q for 2026-07-03 is already filed,
-so the summary reads that 10-Q directly.
+`facts.py AAPL` (13.10.2026): Quartal zum 27.06.2026 (Geschäftsjahr Q3 2026),
+Umsatz 109,42 Mrd. $, +16,4 % gegenüber dem Vorjahr, Nettogewinn 29,79 Mrd. $
+(+27,1 %), verwässertes EPS 2,02 $ (+28,7 %); Bruttomarge 50,1 % (+0,8
+Prozentpunkte gegenüber dem Vorquartal); letzte vier Quartale 466,8 Mrd. $
+Umsatz und 8,71 $ EPS. Pressemitteilung: die EX-99.1 des 8-K vom 30.07.2026.
+Bei Coca-Cola vermerkt das Tool, dass die Fakten der SEC am 03.04.2026 enden,
+während das 10-Q zum 03.07.2026 schon eingereicht ist; die Zusammenfassung
+liest daher dieses 10-Q direkt.
 
-## What it never does
+## Was er nie tut
 
-- Never says a stock is cheap, expensive, a buy or a sell. It reports what
-  the company filed.
-- Never invents a number the filings do not have, or estimates a quarter it
-  cannot derive.
-- Never calls SEC without the User-Agent, and stays well under 10 requests a
-  second.
+- Sagt nie, eine Aktie sei billig, teuer, ein Kauf oder ein Verkauf. Er
+  berichtet, was das Unternehmen eingereicht hat.
+- Erfindet nie eine Zahl, die nicht in den Meldungen steht, und schätzt nie
+  ein Quartal, das er nicht ableiten kann.
+- Ruft die SEC nie ohne User-Agent auf und bleibt weit unter 10 Anfragen pro
+  Sekunde.
 
-## Safety
+## Sicherheit
 
-Education and tooling, not financial advice. This skill only reads filings.
-Nothing places an order except `/trader-broker`, after `/trader-risk` passes
-and the user types an explicit yes for that order.
+Bildung und Werkzeuge, keine Anlageberatung. Dieser Skill liest nur Meldungen.
+Nichts platziert eine Order außer `/trader-broker`, nachdem `/trader-risk` sie
+durchgelassen hat und der Nutzer ein ausdrückliches Ja für genau diese Order
+getippt hat.

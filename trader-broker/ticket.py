@@ -43,10 +43,13 @@ STRING_FIELDS = ("qty", "notional", "limit_price", "stop_price", "trail_price", 
                  "take_profit_limit_price", "stop_loss_stop_price", "stop_loss_limit_price")
 TIF_WORDS = {"day": "good for today", "gtc": "good until canceled", "opg": "at the open",
              "cls": "at the close", "ioc": "immediate or cancel", "fok": "fill or kill"}
-YES_WORDS = ("yes", "y")
-BATCH_WORDS = {"all", "every", "everything", "rest", "remaining", "them", "both", "batch", "each"}
+YES_WORDS = ("yes", "y", "ja", "j")
+BATCH_WORDS = {"all", "every", "everything", "rest", "remaining", "them", "both", "batch", "each",
+               "alle", "allen", "alles", "jede", "jeden", "jedes", "restlichen", "beide", "beiden"}
 DOUBT_WORDS = {"no", "not", "dont", "don't", "wait", "cancel", "stop", "but", "maybe", "later",
-               "hold", "unless", "if"}
+               "hold", "unless", "if",
+               "nein", "nicht", "kein", "keine", "warte", "warten", "abbrechen", "stopp", "aber",
+               "vielleicht", "später", "spaeter", "halt", "falls", "wenn", "außer", "ausser"}
 
 
 class TicketError(Exception):
@@ -161,15 +164,15 @@ def parse_yes(reply, order, batch_symbols=()):
         return False, "the reply is empty"
     if "?" in raw:
         return False, "the reply is a question, not a yes"
-    words = re.findall(r"[a-z']+", raw.lower())
+    words = re.findall(r"[a-zäöüß']+", raw.lower())
     if not words or words[0] not in YES_WORDS:
-        return False, "only a reply that starts with \"yes\" counts (not ok, sure, go, do it)"
+        return False, "only a reply that starts with \"yes\" or \"ja\" counts (not ok, sure, go, do it)"
     if BATCH_WORDS & set(words):
         return False, "a yes covers one order at a time, not a batch"
     if DOUBT_WORDS & set(words[1:]):
         return False, "the reply has a condition or a doubt in it; ask again"
     sym = str(order.get("symbol", "")).upper()
-    tokens = set(re.findall(r"[A-Z][A-Z.\-]{0,6}", raw.upper()))
+    tokens = set(re.findall(r"[A-ZÄÖÜ][A-ZÄÖÜ.\-]{0,6}", raw.upper()))
     others = {s.upper() for s in batch_symbols} - {sym}
     named = tokens & others
     if named:

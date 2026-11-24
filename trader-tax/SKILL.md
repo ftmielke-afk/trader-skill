@@ -1,101 +1,121 @@
 ---
 name: trader-tax
 description: >-
-  Tax Optimizer. Tracks cost-basis lots for every position (FIFO, highest
-  cost first, or specific lots), shows unrealized gains and losses by lot with
-  short or long term, works out what a sale would realize before you sell,
-  finds tax-loss harvesting candidates over a loss threshold, checks the wash
-  sale rule (30 days before and after, GOOG and GOOGL as one family), and
-  writes harvest sells only as proposals. Not tax advice. Use when the user
-  says "what are my gains", "cost basis", "tax lots", "tax-loss harvest",
-  "what would selling cost me in tax", "short or long term", "wash sale", or
-  before selling anything.
-argument-hint: "[ticker]"
+  Steuer-Optimierer. Verfolgt die Kaufposten (Lots) mit Einstandskosten für
+  jede Position (FIFO, höchste Kosten zuerst oder bestimmte Lots), zeigt nicht
+  realisierte Gewinne und Verluste pro Lot mit kurz- oder langfristig,
+  berechnet vor dem Verkauf, was ein Verkauf realisieren würde, findet
+  Kandidaten für Tax-Loss-Harvesting über einer Verlustschwelle, prüft die
+  Wash-Sale-Regel (30 Tage davor und danach, GOOG und GOOGL als eine Familie)
+  und schreibt Harvest-Verkäufe nur als Vorschläge. Keine Steuerberatung.
+  Verwenden, wenn der Nutzer sagt „was sind meine Gewinne“, „Einstandskosten“,
+  „Steuer-Lots“, „Verluste steuerlich nutzen“, „was würde mich ein Verkauf an
+  Steuern kosten“, „kurz- oder langfristig“, „Wash Sale“, oder bevor
+  irgendetwas verkauft wird.
+argument-hint: "[Ticker]"
 ---
 
 # trader-tax
 
-The Tax Optimizer does the arithmetic on the user's lots so nobody sells
-blind. It never decides what is right for the user's taxes. **This is not tax
-advice**: a tax professional decides what applies to them. Say that once,
-early, in every answer that uses this skill.
+**Sprache:** Antworte auf Deutsch. Die Tools geben Englisch aus; gib ihre
+Ergebnisse auf Deutsch wieder und lass Ticker, Befehle und Dateinamen
+unverändert.
 
-`${CLAUDE_SKILL_DIR}` below is this skill's folder (where this SKILL.md lives).
+Der Steuer-Optimierer rechnet mit den Lots des Nutzers, damit niemand blind
+verkauft. Er entscheidet nie, was für die Steuern des Nutzers richtig ist.
+**Das ist keine Steuerberatung**: Eine Steuerfachperson entscheidet, was für
+ihn gilt. Sag das einmal, früh, in jeder Antwort, die diesen Skill nutzt.
+
+**Wichtig für Nutzer in Deutschland:** Die Regeln unten sind US-Bundesrecht
+(Haltedauer, Wash Sale). In Deutschland gelten andere Regeln, etwa die
+Abgeltungsteuer ohne Unterscheidung nach Haltedauer, der
+Sparer-Pauschbetrag und eigene Verlustverrechnungstöpfe für Aktien. Sag das,
+wenn der Nutzer in Deutschland steuerpflichtig ist, und verweise auf eine
+Steuerberaterin oder einen Steuerberater. Die Rechnung mit Lots und
+Einstandskosten bleibt trotzdem nützlich.
+
+`${CLAUDE_SKILL_DIR}` unten ist der Ordner dieses Skills (wo diese SKILL.md liegt).
 
 ```bash
-python3 "${CLAUDE_SKILL_DIR}/lots.py" report --lots              # every lot, gain or loss, term
-python3 "${CLAUDE_SKILL_DIR}/lots.py" sell KO 2 --price 90.11    # what a sale would realize (FIFO)
+python3 "${CLAUDE_SKILL_DIR}/lots.py" report --lots              # jedes Lot, Gewinn oder Verlust, Frist
+python3 "${CLAUDE_SKILL_DIR}/lots.py" sell KO 2 --price 90.11    # was ein Verkauf realisieren würde (FIFO)
 python3 "${CLAUDE_SKILL_DIR}/lots.py" sell KO 2 --method specific --lots KO-2
-python3 "${CLAUDE_SKILL_DIR}/lots.py" harvest --min-loss 100     # candidates, with wash-sale checks
+python3 "${CLAUDE_SKILL_DIR}/lots.py" harvest --min-loss 100     # Kandidaten, mit Wash-Sale-Prüfung
 python3 "${CLAUDE_SKILL_DIR}/lots.py" harvest --min-loss 100 --write
-python3 "${CLAUDE_SKILL_DIR}/lots.py" wash KO                    # is buying KO today a wash sale?
+python3 "${CLAUDE_SKILL_DIR}/lots.py" wash KO                    # wäre ein Kauf von KO heute ein Wash Sale?
 ```
 
-## What it reads and writes
+## Was er liest und schreibt
 
-| file | what |
+| Datei | Inhalt |
 | --- | --- |
-| `trader/portfolio.json` | positions with lots: `{"id", "date", "shares", "cost"}` (cost = total basis); shape: `portfolio.example.json` here |
-| `trader/prices.json` | current prices (trader-alerts: `alerts.py quote --holdings --write`) |
-| `trader/orders.json` | planned buys count for wash sales; `harvest --write` replaces it with sell proposals |
-| `trader/state/tax.json` | the realized sales it logs with `sell --record` |
+| `trader/portfolio.json` | Positionen mit Lots: `{"id", "date", "shares", "cost"}` (cost = gesamte Einstandskosten); Form: `portfolio.example.json` hier |
+| `trader/prices.json` | aktuelle Preise (trader-alerts: `alerts.py quote --holdings --write`) |
+| `trader/orders.json` | geplante Käufe zählen für Wash Sales; `harvest --write` ersetzt die Datei durch Verkaufsvorschläge |
+| `trader/state/tax.json` | die realisierten Verkäufe, die er mit `sell --record` protokolliert |
 
-Lots come from the fills trader-broker records (`ticket.py fill`), or from the
-user's broker statement. If a position has shares but no lots, ask for the
-purchase dates and costs. Never invent a cost basis.
+Lots stammen aus den Ausführungen, die trader-broker festhält (`ticket.py fill`),
+oder aus dem Depotauszug des Nutzers. Hat eine Position Aktien, aber keine
+Lots, frag nach Kaufdaten und Kosten. Erfinde nie Einstandskosten.
 
-## The rules it applies (US federal, arithmetic only)
+## Die Regeln, die er anwendet (US-Bundesrecht, nur Rechnung)
 
-- **Term**: long term if sold more than one year after the purchase date,
-  otherwise short term. `report --lots` shows the date each lot turns long term.
-- **Lot methods**: `fifo` (oldest first, what most brokers do by default),
-  `hifo` (highest cost first) and `specific` (named lots). The order sent to
-  the broker does not carry lot ids: to sell specific lots the user must
-  choose them in the broker's own tax-lot setting, or the broker uses its
-  default method.
-- **Wash sale**: a loss is disallowed to the extent the same or a
-  substantially identical stock is bought within 30 days before or after the
-  sale. The tool checks the other lots still held, planned buys in
-  `trader/orders.json` and the loss sales it has logged. It cannot see an IRA,
-  a spouse's account or another broker, and those count too. Say so.
+- **Frist**: langfristig, wenn mehr als ein Jahr nach dem Kaufdatum verkauft,
+  sonst kurzfristig. `report --lots` zeigt das Datum, an dem jedes Lot
+  langfristig wird.
+- **Lot-Methoden**: `fifo` (älteste zuerst, was die meisten Broker
+  standardmäßig tun), `hifo` (höchste Kosten zuerst) und `specific` (benannte
+  Lots). Die an den Broker gesendete Order enthält keine Lot-IDs: Um bestimmte
+  Lots zu verkaufen, muss der Nutzer sie in der Lot-Einstellung des Brokers
+  selbst wählen, sonst nutzt der Broker seine Standardmethode.
+- **Wash Sale**: Ein Verlust wird insoweit nicht anerkannt, wie dieselbe oder
+  eine im Wesentlichen identische Aktie innerhalb von 30 Tagen vor oder nach
+  dem Verkauf gekauft wird. Das Tool prüft die anderen noch gehaltenen Lots,
+  geplante Käufe in `trader/orders.json` und die Verlustverkäufe, die es
+  protokolliert hat. Es sieht kein IRA, kein Konto des Ehepartners und keinen
+  anderen Broker, und die zählen auch. Sag das.
 
-## Steps
+## Schritte
 
-1. Refresh prices, then `lots.py report --lots`. Show gains and losses by
-   stock, and which lots are short or long term.
-2. Before any sell (rebalance, a stop, a change of mind), run `lots.py sell`
-   with the planned shares and method and show what it would realize.
-3. For harvesting: `lots.py harvest --min-loss 100` (and `--min-pct` if the
-   user wants a percent threshold). For each candidate show the estimated
-   loss, short and long term split, any wash-sale conflict, and the first day
-   they could buy it back. Candidates with a conflict are not proposed.
-4. Only if the user wants proposals: `harvest --write`, then `/trader-risk`,
-   then `/trader-broker`, one yes per order.
-5. After a sale fills, `lots.py sell ... --record` updates the lots and logs
-   the realized result for the year.
+1. Preise aktualisieren, dann `lots.py report --lots`. Zeig Gewinne und
+   Verluste je Aktie und welche Lots kurz- oder langfristig sind.
+2. Vor jedem Verkauf (Rebalancing, ein Stopp, eine Meinungsänderung) `lots.py
+   sell` mit der geplanten Stückzahl und Methode ausführen und zeigen, was er
+   realisieren würde.
+3. Für Harvesting: `lots.py harvest --min-loss 100` (und `--min-pct`, wenn der
+   Nutzer eine Prozentschwelle will). Für jeden Kandidaten den geschätzten
+   Verlust zeigen, aufgeteilt in kurz- und langfristig, jeden
+   Wash-Sale-Konflikt und den ersten Tag, an dem er zurückgekauft werden
+   könnte. Kandidaten mit Konflikt werden nicht vorgeschlagen.
+4. Nur wenn der Nutzer Vorschläge will: `harvest --write`, dann `/trader-risk`,
+   dann `/trader-broker`, ein Ja pro Order.
+5. Nach einer Ausführung aktualisiert `lots.py sell ... --record` die Lots und
+   protokolliert das realisierte Ergebnis für das Jahr.
 
-## Example: the reel's portfolio
+## Beispiel: das Portfolio aus dem Beispiellauf
 
-The copy portfolio bought on 2026-10-13 (AAPL $1,250, AXP $1,119, GOOGL $823,
-KO $708, BAC $600) has one lot per stock, all short term until 2027-10-14.
-If BAC later trades below its $600 basis, `harvest --min-loss 25` lists the
-BAC-1 lot with its loss and "do not buy BAC again before" a date 31 days
-after the sale. If the user also has a BAC buy planned in `trader/orders.json`,
-it flags a wash sale instead of proposing the sell.
+Das am 13.10.2026 gekaufte Kopie-Portfolio (AAPL 1.250 $, AXP 1.119 $, GOOGL
+823 $, KO 708 $, BAC 600 $) hat ein Lot pro Aktie, alle kurzfristig bis zum
+14.10.2027. Fällt BAC später unter seine Einstandskosten von 600 $, listet
+`harvest --min-loss 25` das Lot BAC-1 mit seinem Verlust und „BAC nicht vor“
+einem Datum 31 Tage nach dem Verkauf „wieder kaufen“. Hat der Nutzer
+außerdem einen BAC-Kauf in `trader/orders.json` geplant, markiert er einen
+Wash Sale, statt den Verkauf vorzuschlagen.
 
-## What it never does
+## Was er nie tut
 
-It never files anything, never gives a tax rate or a tax bill, never tells
-the user what they owe, never places an order, and never proposes a harvest
-that it can see would be a wash sale.
+Er reicht nie etwas ein, nennt nie einen Steuersatz oder eine Steuerschuld,
+sagt dem Nutzer nie, was er schuldet, platziert nie eine Order und schlägt nie
+ein Harvesting vor, von dem er sehen kann, dass es ein Wash Sale wäre.
 
-## Safety
+## Sicherheit
 
-- Not tax advice, and education and tooling, not financial advice. Check with a tax professional.
-- Paper trading by default (`"paper": true`). Going live is the user's own decision, in their own config.
-- Nothing in this pack places an order except trader-broker, and only when all three hold: trader-risk
-  passed that exact order today, the user typed an explicit yes for that one order in the chat, and the
-  user clicked Allow once on Claude's own card because the order tool is set to "Needs approval"
-  (Customize > Connectors > tool permissions). Never set an order tool to "Always allow".
-- No options, margin, short selling or leverage unless the config allows it and the user confirms.
-- Broker keys live in environment variables or the Claude Desktop config, never in the chat.
+- Keine Steuerberatung, und Bildung und Werkzeuge, keine Anlageberatung. Frag eine Steuerfachperson.
+- Standardmäßig Paper Trading (`"paper": true`). Live zu gehen ist allein die Entscheidung des Nutzers, in seiner eigenen Config.
+- Nichts in diesem Paket platziert eine Order außer trader-broker, und nur wenn alle drei Bedingungen
+  erfüllt sind: trader-risk hat genau diese Order heute durchgelassen, der Nutzer hat im Chat ein
+  ausdrückliches Ja für genau diese eine Order getippt, und der Nutzer hat auf Claudes eigener Karte
+  „Allow once“ geklickt, weil das Order-Tool auf „Needs approval“ steht (Customize > Connectors >
+  Tool-Berechtigungen). Ein Order-Tool nie auf „Always allow“ stellen.
+- Keine Optionen, kein Margin, keine Leerverkäufe und kein Hebel, außer die Config erlaubt es und der Nutzer bestätigt.
+- Broker-Schlüssel liegen in Umgebungsvariablen oder der Claude-Desktop-Config, niemals im Chat.
