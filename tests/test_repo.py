@@ -8,8 +8,8 @@ from _load import ROOT
 SKILLS = ["trader-copycat", "trader-news", "trader-budget", "trader-pelosi", "trader-analyst",
           "trader-screener", "trader-risk", "trader-broker", "trader-tax", "trader-alerts",
           "trader-rebalance"]
-ABOUT = ("11 Claude skills that copy the investors you trust, watch the news and Congress, size every "
-         "trade to your budget, and never place an order without your yes.")
+ABOUT = ("11 Claude-Skills, die die Investoren kopieren, denen du vertraust, die Nachrichten und den "
+         "Kongress beobachten, jeden Trade an dein Budget anpassen und nie eine Order ohne dein Ja platzieren.")
 # skills that can lead to an order carry the safety block
 ORDER_PATH = ["trader-copycat", "trader-budget", "trader-pelosi", "trader-risk", "trader-broker",
               "trader-tax", "trader-alerts", "trader-rebalance"]
@@ -52,8 +52,8 @@ class Repo(unittest.TestCase):
         for s in ORDER_PATH:
             _, text = frontmatter(os.path.join(ROOT, s, "SKILL.md"))
             low = " ".join(text.lower().split())
-            self.assertIn("not financial advice", low, s)
-            self.assertIn("yes", low, s)
+            self.assertIn("keine anlageberatung", low, s)
+            self.assertIn("ausdrückliches ja", low, s)
 
     def test_plugin_manifest_points_at_the_root_skills(self):
         with open(os.path.join(ROOT, ".claude-plugin", "plugin.json")) as fh:
@@ -69,12 +69,12 @@ class Repo(unittest.TestCase):
     def test_readme_carries_the_reel_copy(self):
         with open(os.path.join(ROOT, "README.md"), encoding="utf-8") as fh:
             readme = " ".join(fh.read().split())
-        self.assertTrue(readme.startswith("# The Trader skill"))
+        self.assertTrue(readme.startswith("# Der Trader-Skill"))
         for line in (ABOUT,
                      "https://github.com/Jakeschincariol/trader-skill install skill",
                      "/plugin marketplace add Jakeschincariol/trader-skill",
                      "/plugin install trader-skill@trader-skill",
-                     "## Fine print"):
+                     "## Kleingedrucktes"):
             self.assertIn(line, readme)
         for s in SKILLS:
             self.assertIn("/" + s, readme, s)

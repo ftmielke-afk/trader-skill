@@ -34,6 +34,18 @@ class ExplicitYes(unittest.TestCase):
                   "yes 1250"):
             self.assertTrue(self.yes(r), r)
 
+    def test_german_ja_counts(self):
+        for r in ("ja", "Ja.", "JA", "j", "ja, kaufen", "Ja, für AAPL", "ja 1250", "ja $1,250 AAPL"):
+            self.assertTrue(self.yes(r), r)
+        ford = {"symbol": "F", "side": "buy", "notional": "100", "type": "market", "time_in_force": "day"}
+        self.assertFalse(ticket.parse_yes("ja, für AAPL", ford, ["F", "AAPL"])[0])
+
+    def test_german_doubt_or_batch_does_not(self):
+        for r in ("jein", "klar", "mach", "ja zu allen", "ja, alle", "ja für den rest", "ja beide",
+                  "ja, aber nur 1000", "ja vielleicht", "ja, später", "nein", "ja nicht", "ja?",
+                  "ja AXP", "ja wenn der Kurs fällt"):
+            self.assertFalse(self.yes(r), r)
+
     def test_anything_else_does_not(self):
         for r in ("", "sure", "ok", "okay", "go", "do it", "yeah", "yep", "absolutely", "send it",
                   "yes to all", "yes, all of them", "yes to the rest", "yes both",

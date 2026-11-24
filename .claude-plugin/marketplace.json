@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "trader-skill",
-  "description": "The Trader skill pack for Claude",
+  "description": "Das Trader-Skill-Paket für Claude",
   "owner": {
     "name": "Jake Schincariol",
     "url": "https://opusjake.ai"
@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "trader-skill",
-      "description": "Eleven Claude skills for investing: copy a famous investor's 13F, watch the news, size trades to your budget, track Congress's stock disclosures, read earnings, screen, check risk, place approved orders, harvest tax losses, price alerts and rebalancing.",
+      "description": "Elf Claude-Skills fürs Investieren: die 13F eines berühmten Investors kopieren, die Nachrichten beobachten, Trades nach dem Budget einteilen, die Aktien-Offenlegungen des Kongresses verfolgen, Quartalszahlen lesen, screenen, Risiko prüfen, freigegebene Orders platzieren, Verluste steuerlich nutzen, Kursalarme und Rebalancing.",
       "source": "./",
       "category": "productivity",
       "homepage": "https://github.com/Jakeschincariol/trader-skill"

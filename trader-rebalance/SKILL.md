@@ -1,98 +1,113 @@
 ---
 name: trader-rebalance
 description: >-
-  Rebalancer. Brings the portfolio back to its target weights when it
-  drifts: values every holding at current prices, works out each stock's
-  drift from its target in percentage points, trades only the stocks outside
-  a band (default 5 points), keeps the cash buffer and the per-stock cap,
-  skips tiny trades, lists sells before buys, and writes the trades to
-  trader/orders.json as proposals. Use when the user says "rebalance",
-  "my portfolio drifted", "bring it back to the targets", "I added money",
-  "the new 13F changed the weights", "am I overweight", or on a schedule
-  (monthly or quarterly) after /trader-copycat updates the targets.
-argument-hint: "[band in points]"
+  Rebalancer. Bringt das Portfolio auf seine Zielgewichte zurück, wenn es
+  abweicht: bewertet jeden Bestand zu aktuellen Kursen, berechnet die
+  Abweichung jeder Aktie von ihrem Ziel in Prozentpunkten, handelt nur die
+  Aktien außerhalb einer Bandbreite (Standard 5 Punkte), hält den Cash-Puffer
+  und die Obergrenze pro Aktie, überspringt winzige Trades, listet Verkäufe
+  vor Käufen und schreibt die Trades als Vorschläge in trader/orders.json.
+  Verwenden, wenn der Nutzer sagt „rebalancen“, „mein Portfolio ist
+  verrutscht“, „bring es zurück auf die Ziele“, „ich habe Geld nachgelegt“,
+  „die neue 13F hat die Gewichte geändert“, „bin ich übergewichtet“, oder nach
+  Zeitplan (monatlich oder vierteljährlich), nachdem /trader-copycat die Ziele
+  aktualisiert hat.
+argument-hint: "[Bandbreite in Punkten]"
 ---
 
 # trader-rebalance
 
-The Rebalancer keeps the portfolio looking like the plan. Prices move, new
-money arrives and a new 13F changes the weights; this skill finds the stocks
-that drifted too far and proposes the trades that bring them back. It writes
-proposals only: trader-risk checks them and trader-broker asks the user yes
-or no for each one.
+**Sprache:** Antworte auf Deutsch. Die Tools geben Englisch aus; gib ihre
+Ergebnisse auf Deutsch wieder und lass Ticker, Befehle und Dateinamen
+unverändert.
 
-`${CLAUDE_SKILL_DIR}` below is this skill's folder (where this SKILL.md lives).
+Der Rebalancer sorgt dafür, dass das Portfolio dem Plan entspricht. Kurse
+bewegen sich, neues Geld kommt hinzu, und eine neue 13F ändert die Gewichte;
+dieser Skill findet die Aktien, die zu weit abgewichen sind, und schlägt die
+Trades vor, die sie zurückbringen. Er schreibt nur Vorschläge: trader-risk
+prüft sie, und trader-broker fragt den Nutzer für jede einzelne nach ja oder
+nein.
+
+`${CLAUDE_SKILL_DIR}` unten ist der Ordner dieses Skills (wo diese SKILL.md liegt).
 
 ```bash
-python3 "${CLAUDE_SKILL_DIR}/rebalance.py"                    # the drift table, no files written
-python3 "${CLAUDE_SKILL_DIR}/rebalance.py" --band 5 --write   # proposals -> trader/orders.json
-python3 "${CLAUDE_SKILL_DIR}/rebalance.py" --sell-untracked   # also sell holdings not in the targets
+python3 "${CLAUDE_SKILL_DIR}/rebalance.py"                    # die Abweichungstabelle, schreibt keine Dateien
+python3 "${CLAUDE_SKILL_DIR}/rebalance.py" --band 5 --write   # Vorschläge -> trader/orders.json
+python3 "${CLAUDE_SKILL_DIR}/rebalance.py" --sell-untracked   # auch Bestände verkaufen, die nicht in den Zielen sind
 python3 "${CLAUDE_SKILL_DIR}/rebalance.py" --json
 ```
 
-## What it reads and writes
+## Was er liest und schreibt
 
-| file | what |
+| Datei | Inhalt |
 | --- | --- |
-| `trader/portfolio.json` | cash and positions (shares); same shape as trader-tax's `portfolio.example.json` |
-| `trader/prices.json` | a price for every holding and every target (trader-alerts writes it) |
-| `trader/targets.json` | the target weights (trader-copycat writes it) |
-| `trader/config.json` | cash buffer, cap, min and max order, `rebalance_band_pct` |
-| `trader/orders.json` | the proposals it writes with `--write`, sells first |
+| `trader/portfolio.json` | Cash und Positionen (Stückzahlen); gleiche Form wie `portfolio.example.json` von trader-tax |
+| `trader/prices.json` | ein Kurs für jeden Bestand und jedes Ziel (trader-alerts schreibt sie) |
+| `trader/targets.json` | die Zielgewichte (trader-copycat schreibt sie) |
+| `trader/config.json` | Cash-Puffer, Obergrenze, Mindest- und Höchstorder, `rebalance_band_pct` |
+| `trader/orders.json` | die Vorschläge, die er mit `--write` schreibt, Verkäufe zuerst |
 
-## How it decides
+## Wie er entscheidet
 
-- **Account value** = cash + every holding at its price.
-- **Targets**: the weights renormalised over the stock sleeve (account minus
-  the cash buffer), with no stock above `max_position_pct` of the account. The
-  excess is shared out, the same way trader-budget does it, so a capped stock
-  is not bought back over the cap every month.
-- **Drift** = current percent of the account minus target percent.
-- **Band**: only stocks drifting MORE than the band trade (default 5 points).
-  A trade takes the stock all the way back to its target. A small band means
-  more trades; a wide band means fewer.
-- **Sells first**, then buys. Buys only spend cash above the buffer; if there
-  is not enough, all buys are scaled down by the same share.
-- Trades under `min_order_usd` are skipped. A trade over `max_order_usd` is
-  cut to the max with a note to run again after it fills.
-- **Untracked** holdings (not in the targets) are left alone and listed,
-  unless the user asks to sell them with `--sell-untracked`.
+- **Kontowert** = Cash + jeder Bestand zu seinem Kurs.
+- **Ziele**: die Gewichte, hochgerechnet auf den Aktienanteil (Konto minus
+  Cash-Puffer), keine Aktie über `max_position_pct` des Kontos. Der Überschuss
+  wird verteilt, genau wie bei trader-budget, damit eine gedeckelte Aktie
+  nicht jeden Monat über die Obergrenze zurückgekauft wird.
+- **Abweichung** = aktueller Prozentanteil am Konto minus Zielanteil.
+- **Bandbreite**: Nur Aktien, die MEHR als die Bandbreite abweichen, werden
+  gehandelt (Standard 5 Punkte). Ein Trade bringt die Aktie ganz auf ihr Ziel
+  zurück. Eine kleine Bandbreite heißt mehr Trades, eine große weniger.
+- **Verkäufe zuerst**, dann Käufe. Käufe verwenden nur Cash über dem Puffer;
+  reicht es nicht, werden alle Käufe im gleichen Verhältnis verkleinert.
+- Trades unter `min_order_usd` werden übersprungen. Ein Trade über
+  `max_order_usd` wird auf das Maximum gekürzt, mit dem Hinweis, nach der
+  Ausführung erneut zu laufen.
+- **Nicht verfolgte** Bestände (nicht in den Zielen) bleiben unberührt und
+  werden aufgelistet, außer der Nutzer will sie mit `--sell-untracked`
+  verkaufen.
 
-## Steps
+## Schritte
 
-1. Refresh prices: trader-alerts `alerts.py quote --holdings --write`.
-2. Run `rebalance.py` and show the drift table in plain words: which stocks
-   are over or under, by how many points, and what it would trade.
-3. Before any sell, run trader-tax (`lots.py sell TICKER SHARES`) and show
-   what the sale would realize. Selling a winner can mean a tax bill.
-4. If the user wants the trades: `rebalance.py --write`, then `/trader-risk`,
-   then `/trader-broker`, one yes per order.
+1. Kurse aktualisieren: trader-alerts `alerts.py quote --holdings --write`.
+2. `rebalance.py` ausführen und die Abweichungstabelle in einfachen Worten
+   zeigen: welche Aktien über oder unter dem Ziel liegen, um wie viele Punkte,
+   und was er handeln würde.
+3. Vor jedem Verkauf trader-tax ausführen (`lots.py sell TICKER SHARES`) und
+   zeigen, was der Verkauf realisieren würde. Einen Gewinner zu verkaufen kann
+   Steuern auslösen.
+4. Will der Nutzer die Trades: `rebalance.py --write`, dann `/trader-risk`,
+   dann `/trader-broker`, ein Ja pro Order.
 
-## Example: the reel's portfolio
+## Beispiel: das Portfolio aus dem Beispiellauf
 
-The copy portfolio bought on 2026-10-13 (AAPL $1,250 capped, AXP $1,119,
-GOOGL $823, KO $708, BAC $600, $500 cash), valued at that day's closes, sits
-on its targets: every drift is under 0.1 point, so `rebalance.py` says
-"Nothing is outside the band" and exits 1. If the user adds $2,000 of cash,
-the account is $7,000 and the cap becomes $1,750. AAPL is now 7.1 points under
-its target and AXP 6.4, both outside the 5-point band, so it proposes buying
-$499 of AAPL and $446 of AXP. GOOGL, KO and BAC are under target too, but
-inside the band, so they wait. Add $5,000 instead and all five are outside
-the band: five buys that leave the $1,000 buffer in cash.
+Das am 13.10.2026 gekaufte Kopie-Portfolio (AAPL 1.250 $ gedeckelt, AXP
+1.119 $, GOOGL 823 $, KO 708 $, BAC 600 $, 500 $ Cash), bewertet zu den
+Schlusskursen dieses Tages, liegt auf seinen Zielen: Jede Abweichung ist unter
+0,1 Punkten, also sagt `rebalance.py` „Nothing is outside the band“ (nichts
+liegt außerhalb der Bandbreite) und endet mit Exit-Code 1. Legt der Nutzer
+2.000 $ Cash nach, ist das Konto 7.000 $ wert und die Obergrenze steigt auf
+1.750 $. AAPL liegt jetzt 7,1 Punkte unter seinem Ziel und AXP 6,4, beide
+außerhalb der Bandbreite von 5 Punkten, also schlägt er vor, AAPL für 499 $
+und AXP für 446 $ zu kaufen. GOOGL, KO und BAC liegen auch unter dem Ziel,
+aber innerhalb der Bandbreite, also warten sie. Legt er stattdessen 5.000 $
+nach, liegen alle fünf außerhalb: fünf Käufe, die den Puffer von 1.000 $ in
+Cash lassen.
 
-## What it never does
+## Was er nie tut
 
-It never places an order, never trades inside the band to chase small
-differences, never sells holdings outside the targets unless asked, and
-never says a rebalance will improve returns.
+Er platziert nie eine Order, handelt nie innerhalb der Bandbreite, um kleinen
+Unterschieden hinterherzulaufen, verkauft nie Bestände außerhalb der Ziele,
+außer auf Wunsch, und sagt nie, ein Rebalancing werde die Rendite verbessern.
 
-## Safety
+## Sicherheit
 
-- Education and tooling, not financial advice. A rebalance follows the user's own targets, not a forecast.
-- Paper trading by default (`"paper": true`). Going live is the user's own decision, in their own config.
-- Nothing in this pack places an order except trader-broker, and only when all three hold: trader-risk
-  passed that exact order today, the user typed an explicit yes for that one order in the chat, and the
-  user clicked Allow once on Claude's own card because the order tool is set to "Needs approval"
-  (Customize > Connectors > tool permissions). Never set an order tool to "Always allow".
-- No options, margin, short selling or leverage unless the config allows it and the user confirms.
-- Broker keys live in environment variables or the Claude Desktop config, never in the chat.
+- Bildung und Werkzeuge, keine Anlageberatung. Ein Rebalancing folgt den eigenen Zielen des Nutzers, keiner Prognose.
+- Standardmäßig Paper Trading (`"paper": true`). Live zu gehen ist allein die Entscheidung des Nutzers, in seiner eigenen Config.
+- Nichts in diesem Paket platziert eine Order außer trader-broker, und nur wenn alle drei Bedingungen
+  erfüllt sind: trader-risk hat genau diese Order heute durchgelassen, der Nutzer hat im Chat ein
+  ausdrückliches Ja für genau diese eine Order getippt, und der Nutzer hat auf Claudes eigener Karte
+  „Allow once“ geklickt, weil das Order-Tool auf „Needs approval“ steht (Customize > Connectors >
+  Tool-Berechtigungen). Ein Order-Tool nie auf „Always allow“ stellen.
+- Keine Optionen, kein Margin, keine Leerverkäufe und kein Hebel, außer die Config erlaubt es und der Nutzer bestätigt.
+- Broker-Schlüssel liegen in Umgebungsvariablen oder der Claude-Desktop-Config, niemals im Chat.

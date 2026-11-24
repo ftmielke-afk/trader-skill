@@ -1,81 +1,92 @@
 ---
 name: trader-risk
 description: >-
-  Risk Manager. Checks every proposed order against your limits before it can
-  reach the broker and blocks anything over them: blocked tickers, max order
-  size, minimum order, max position percent after the fill, the cash buffer,
-  margin, short sales, options and crypto (off unless allowed), malformed
-  orders, duplicates and a daily order limit. Prints PASS or BLOCK with the
-  reason for each order and records the verdicts so trader-broker only shows
-  an order that passed. Use when the user says "check my orders", "is this
-  safe", "risk check", "does this break my rules", "can I place this", or
-  before /trader-broker, always.
-argument-hint: "[path to orders.json]"
+  Risiko-Manager. Prüft jede vorgeschlagene Order gegen die Limits des
+  Nutzers, bevor sie den Broker erreichen kann, und blockiert alles, was
+  darüber liegt: gesperrte Ticker, maximale Ordergröße, Mindestorder, maximaler
+  Positionsanteil nach der Ausführung, der Cash-Puffer, Margin, Leerverkäufe,
+  Optionen und Krypto (aus, außer erlaubt), fehlerhafte Orders, Duplikate und
+  ein Tageslimit für Orders. Gibt für jede Order PASS oder BLOCK mit Begründung
+  aus und speichert die Urteile, damit trader-broker nur eine Order zeigt, die
+  bestanden hat. Verwenden, wenn der Nutzer sagt „prüf meine Orders“, „ist das
+  sicher“, „Risikoprüfung“, „verstößt das gegen meine Regeln“, „kann ich das
+  platzieren“, und immer vor /trader-broker.
+argument-hint: "[Pfad zu orders.json]"
 ---
 
 # trader-risk
 
-The Risk Manager is the gate between a proposal and the broker. Every order
-written by trader-budget, trader-rebalance or trader-tax passes through it.
-A BLOCK is final for that order: it does not go to the user for a yes, and
-it does not go to the broker.
+**Sprache:** Antworte auf Deutsch. Die Tools geben Englisch aus; gib ihre
+Ergebnisse auf Deutsch wieder und lass Ticker, Befehle, Dateinamen und die
+Urteile PASS und BLOCK unverändert.
 
-`${CLAUDE_SKILL_DIR}` below is this skill's folder (where this SKILL.md lives).
+Der Risiko-Manager ist die Schranke zwischen einem Vorschlag und dem Broker.
+Jede Order, die trader-budget, trader-rebalance oder trader-tax schreibt, muss
+durch ihn hindurch. Ein BLOCK ist für diese Order endgültig: Sie geht nicht
+zum Nutzer für ein Ja und nicht zum Broker.
+
+`${CLAUDE_SKILL_DIR}` unten ist der Ordner dieses Skills (wo diese SKILL.md liegt).
 
 ```bash
-python3 "${CLAUDE_SKILL_DIR}/check.py"             # trader/ files; writes trader/state/risk.json
+python3 "${CLAUDE_SKILL_DIR}/check.py"             # trader/-Dateien; schreibt trader/state/risk.json
 python3 "${CLAUDE_SKILL_DIR}/check.py" --json
-python3 "${CLAUDE_SKILL_DIR}/check.py" --no-write  # look without recording
+python3 "${CLAUDE_SKILL_DIR}/check.py" --no-write  # ansehen, ohne zu speichern
 ```
 
-## What it reads and writes
+## Was er liest und schreibt
 
-| file | what |
+| Datei | Inhalt |
 | --- | --- |
-| `trader/orders.json` | the proposed orders |
-| `trader/config.json` | the limits (trader-budget ships `config.example.json`) |
-| `trader/portfolio.json` | cash and holdings; if missing, a fresh account funded with the budget |
-| `trader/prices.json` | needed to size share-count orders and value holdings |
-| `trader/state/broker.json` | what was placed today, for duplicates and the daily limit |
-| `trader/state/risk.json` | the verdicts it writes, with a fingerprint of each exact order |
+| `trader/orders.json` | die vorgeschlagenen Orders |
+| `trader/config.json` | die Limits (trader-budget liefert `config.example.json` mit) |
+| `trader/portfolio.json` | Cash und Bestände; fehlt sie, gilt ein frisches Konto mit dem Budget als Guthaben |
+| `trader/prices.json` | nötig, um Orders nach Stückzahl einzuschätzen und Bestände zu bewerten |
+| `trader/state/broker.json` | was heute platziert wurde, für Duplikate und das Tageslimit |
+| `trader/state/risk.json` | die Urteile, die er schreibt, mit einem Fingerabdruck jeder exakten Order |
 
-## The checks
+## Die Prüfungen
 
-Orders are checked in file order, as if each passed order had filled, so a
-batch that is fine order by order but breaks a rule together is caught.
+Orders werden in der Reihenfolge der Datei geprüft, als wäre jede bestandene
+Order schon ausgeführt. So wird ein Paket erwischt, das Order für Order in
+Ordnung ist, zusammen aber eine Regel verletzt.
 
-| check | blocks when |
+| Prüfung | blockiert, wenn |
 | --- | --- |
-| format | no symbol, side not buy or sell, both or neither of qty and notional, a notional order that is not market + day (Alpaca's rule), a limit order with no limit price |
-| asset | an option symbol while `allow_options` is false; crypto or anything that is not a US stock or ETF ticker |
-| blocked | the ticker is on the `blocked` list |
-| size | under `min_order_usd` or over `max_order_usd` |
-| position | the stock would be over `max_position_pct` of the account after the fill |
-| cash | the buy would leave less than the cash buffer, or need margin (`allow_margin` false) |
-| short | a sell of more than you hold (`allow_short` false) |
-| duplicate | the same symbol and side twice in one batch, or already placed today |
-| daily limit | more than `max_orders_per_day` placed today |
+| format | kein Symbol, side weder buy noch sell, qty und notional beide oder keines, eine notional-Order, die nicht market + day ist (Alpacas Regel), eine Limit-Order ohne Limitpreis |
+| asset | ein Optionssymbol, während `allow_options` false ist; Krypto oder alles, was kein Ticker einer US-Aktie oder eines ETF ist |
+| blocked | der Ticker steht auf der Liste `blocked` |
+| size | unter `min_order_usd` oder über `max_order_usd` |
+| position | die Aktie läge nach der Ausführung über `max_position_pct` des Kontos |
+| cash | der Kauf ließe weniger als den Cash-Puffer übrig oder bräuchte Margin (`allow_margin` false) |
+| short | ein Verkauf von mehr, als man hält (`allow_short` false) |
+| duplicate | dasselbe Symbol und dieselbe Richtung zweimal in einem Paket, oder heute schon platziert |
+| daily limit | mehr als `max_orders_per_day` heute platziert |
 
-Warnings do not block, but say them to the user: a LIVE account, a number
-sent as a number instead of a string, an advanced (bracket) order.
+Warnungen blockieren nicht, aber sag sie dem Nutzer: ein LIVE-Konto, eine
+Zahl, die als Zahl statt als String gesendet wird, eine erweiterte
+(Bracket-)Order.
 
-## Steps
+## Schritte
 
-1. Make sure `trader/prices.json` is fresh if any order is a share count or
-   any holding needs a value (trader-alerts: `alerts.py quote --holdings --write`).
-2. Run `check.py`. Exit code 0 means every order passed, 1 means at least one
-   was blocked.
-3. Tell the user the result in plain words, order by order. For a BLOCK, give
-   the reason and the fix (a smaller amount, a different stock, or a rule the
-   user may decide to change). Never change a limit yourself.
-4. If the orders change in any way, run the check again. trader-broker matches
-   each order to its verdict by fingerprint, so an edited order is not ready
-   until it passes again, and a verdict from yesterday does not count today.
+1. Sorg dafür, dass `trader/prices.json` aktuell ist, wenn eine Order eine
+   Stückzahl ist oder ein Bestand bewertet werden muss (trader-alerts:
+   `alerts.py quote --holdings --write`).
+2. Führ `check.py` aus. Exit-Code 0 heißt: jede Order hat bestanden, 1 heißt:
+   mindestens eine wurde blockiert.
+3. Sag dem Nutzer das Ergebnis in einfachen Worten, Order für Order. Bei einem
+   BLOCK nenn den Grund und die Abhilfe (ein kleinerer Betrag, eine andere
+   Aktie oder eine Regel, die der Nutzer ändern könnte). Ändere nie selbst ein
+   Limit.
+4. Ändern sich die Orders in irgendeiner Weise, prüfe erneut. trader-broker
+   ordnet jede Order per Fingerabdruck ihrem Urteil zu, eine bearbeitete Order
+   ist also erst bereit, wenn sie erneut besteht, und ein Urteil von gestern
+   zählt heute nicht.
 
-## Example: the reel
+## Beispiel: der Beispiellauf
 
-The five buys from trader-budget (AAPL $1,250, AXP $1,119, GOOGL $823, KO
-$708, BAC $600) on a fresh $5,000 paper account with the example config:
+Die fünf Käufe von trader-budget (AAPL 1.250 $, AXP 1.119 $, GOOGL 823 $, KO
+708 $, BAC 600 $) auf einem frischen Paper-Konto mit 5.000 $ und der
+Beispiel-Config:
 
 ```
 PASS  #1 buy AAPL $1,250
@@ -86,24 +97,26 @@ PASS  #5 buy BAC $600
 5 passed, 0 blocked. Cash after the passed orders: $500 (paper account).
 ```
 
-AAPL lands exactly on the 25% cap ($1,250 of $5,000), which is allowed. A
-sixth order, another $100 of AAPL, is blocked three ways: it would dip into
-the $500 cash buffer, put AAPL over its 25% cap, and repeat AAPL in the same
-batch.
+Auf Deutsch: alle fünf bestanden, keine blockiert, danach 500 $ Cash auf dem
+Paper-Konto. AAPL landet genau auf der Obergrenze von 25 % (1.250 $ von
+5.000 $), was erlaubt ist. Eine sechste Order, weitere 100 $ AAPL, wird aus
+drei Gründen blockiert: Sie würde den Cash-Puffer von 500 $ angreifen, AAPL
+über seine 25 % bringen und AAPL im selben Paket wiederholen.
 
-## What it never does
+## Was er nie tut
 
-It never places an order, never edits an order to make it pass, never
-loosens a limit, and never treats a PASS as the user's yes. A PASS only means
-the order is allowed to be shown to the user.
+Er platziert nie eine Order, bearbeitet nie eine Order, damit sie besteht,
+lockert nie ein Limit und behandelt ein PASS nie als das Ja des Nutzers. Ein
+PASS heißt nur, dass die Order dem Nutzer gezeigt werden darf.
 
-## Safety
+## Sicherheit
 
-- Education and tooling, not financial advice. A PASS is a rules check, not a recommendation.
-- Paper trading by default (`"paper": true`). Going live is the user's own decision, in their own config.
-- Nothing in this pack places an order except trader-broker, and only when all three hold: trader-risk
-  passed that exact order today, the user typed an explicit yes for that one order in the chat, and the
-  user clicked Allow once on Claude's own card because the order tool is set to "Needs approval"
-  (Customize > Connectors > tool permissions). Never set an order tool to "Always allow".
-- No options, margin, short selling or leverage unless the config allows it and the user confirms.
-- Broker keys live in environment variables or the Claude Desktop config, never in the chat.
+- Bildung und Werkzeuge, keine Anlageberatung. Ein PASS ist eine Regelprüfung, keine Empfehlung.
+- Standardmäßig Paper Trading (`"paper": true`). Live zu gehen ist allein die Entscheidung des Nutzers, in seiner eigenen Config.
+- Nichts in diesem Paket platziert eine Order außer trader-broker, und nur wenn alle drei Bedingungen
+  erfüllt sind: trader-risk hat genau diese Order heute durchgelassen, der Nutzer hat im Chat ein
+  ausdrückliches Ja für genau diese eine Order getippt, und der Nutzer hat auf Claudes eigener Karte
+  „Allow once“ geklickt, weil das Order-Tool auf „Needs approval“ steht (Customize > Connectors >
+  Tool-Berechtigungen). Ein Order-Tool nie auf „Always allow“ stellen.
+- Keine Optionen, kein Margin, keine Leerverkäufe und kein Hebel, außer die Config erlaubt es und der Nutzer bestätigt.
+- Broker-Schlüssel liegen in Umgebungsvariablen oder der Claude-Desktop-Config, niemals im Chat.

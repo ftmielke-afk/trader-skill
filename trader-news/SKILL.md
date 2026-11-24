@@ -1,105 +1,120 @@
 ---
 name: trader-news
 description: >-
-  The News Monitor. Watches breaking market news and SEC filings for the
-  stocks you hold (or are about to copy): Yahoo Finance headlines per ticker
-  and each company's 8-K filings on SEC EDGAR (earnings, CEO changes, deals,
-  restatements, bankruptcy). Shows only what is new since the last check,
-  newest first, flags what touches your positions and why it matters, and
-  never repeats an item. Use when the user says "any news on my stocks",
-  "what's happening with Apple", "monitor the news", "watch my portfolio",
-  "did anything break", "check the 8-Ks", or "morning briefing".
-argument-hint: "[tickers]"
+  Der Nachrichten-Monitor. Beobachtet Eilmeldungen vom Markt und SEC-Meldungen
+  zu den Aktien, die der Nutzer hält (oder gleich kopieren will): Schlagzeilen
+  von Yahoo Finance pro Ticker und die 8-K-Meldungen jedes Unternehmens bei SEC
+  EDGAR (Quartalszahlen, CEO-Wechsel, Übernahmen, Bilanzkorrekturen,
+  Insolvenz). Zeigt nur, was seit der letzten Prüfung neu ist, das Neueste
+  zuerst, markiert, was die Positionen betrifft und warum es zählt, und
+  wiederholt nie einen Eintrag. Verwenden, wenn der Nutzer sagt „gibt es News
+  zu meinen Aktien“, „was ist los bei Apple“, „überwache die Nachrichten“,
+  „beobachte mein Portfolio“, „ist etwas passiert“, „prüf die 8-Ks“ oder
+  „Morgenbriefing“ (auch auf Englisch: "any news on my stocks").
+argument-hint: "[Ticker]"
 ---
 
 # trader-news
 
-A position you hold can change in a minute: an earnings miss, a CEO leaving,
-a lawsuit, a restatement. This skill reads the two feeds that carry those
-first for each of your stocks and tells you only what is new.
+**Sprache:** Antworte auf Deutsch. Die Tools geben Englisch aus; gib ihre
+Ergebnisse auf Deutsch wieder und lass Ticker, Befehle und Dateinamen
+unverändert. Zitate aus englischen Quellen übersetzt du und nennst die Quelle.
 
-Tool in this folder (standard library Python, no keys):
+Eine Position kann sich in einer Minute ändern: verfehlte Quartalszahlen, ein
+CEO, der geht, eine Klage, eine Bilanzkorrektur. Dieser Skill liest für jede
+Aktie die zwei Feeds, die so etwas zuerst bringen, und meldet nur, was neu ist.
+
+Tool in diesem Ordner (Python mit Standardbibliothek, keine Schlüssel):
 
 ```bash
 python3 "${CLAUDE_SKILL_DIR}/news.py" --help
 ```
 
-## What it reads and writes
+## Was er liest und schreibt
 
-- Your tickers: `--tickers`, else `trader/portfolio.json` positions, else
-  `trader/targets.json` weights (so it works right after `/trader-copycat`).
-- Headlines: Yahoo Finance's public headline RSS, one feed per ticker
+- Die Ticker: `--tickers`, sonst die Positionen in `trader/portfolio.json`,
+  sonst die Gewichte in `trader/targets.json` (so funktioniert er direkt nach
+  `/trader-copycat`).
+- Schlagzeilen: der öffentliche Schlagzeilen-RSS von Yahoo Finance, ein Feed
+  pro Ticker
   (`https://feeds.finance.yahoo.com/rss/2.0/headline?s=AAPL&region=US&lang=en-US`).
-- Filings: SEC EDGAR's company Atom feed, 8-K by default (`--forms 8-K,10-Q`
-  for more). Needs the SEC User-Agent from `trader/config.json`
-  (`sec_user_agent`) or `SEC_USER_AGENT`. Without it, filings are skipped with
-  a note and headlines still run.
-- Writes `trader/state/news.json`: what has been shown (kept 30 days) and the
-  CIK for each ticker, so every item appears once.
+- Meldungen: der Atom-Feed von SEC EDGAR pro Unternehmen, standardmäßig 8-K
+  (`--forms 8-K,10-Q` für mehr). Braucht den SEC-User-Agent aus
+  `trader/config.json` (`sec_user_agent`) oder `SEC_USER_AGENT`. Ohne ihn
+  werden Meldungen mit einem Hinweis übersprungen, Schlagzeilen laufen weiter.
+- Schreibt `trader/state/news.json`: was schon gezeigt wurde (30 Tage
+  aufbewahrt) und die CIK je Ticker, damit jeder Eintrag nur einmal erscheint.
 
-## The rules
+## Die Regeln
 
-- **Headlines are leads, not facts.** Before telling the user something
-  happened, open the story or the filing and read it. Quote the source and
-  link it. Never summarise a paywalled story you could not read: say it is
-  paywalled.
-- **Filings beat headlines.** If an 8-K and a headline disagree, the 8-K is
-  what the company told the SEC.
-- **Say what it touches.** Every item lists the tickers it touches (the feed
-  it came from plus any of your tickers or company names it mentions) and
-  tags (earnings, analyst, legal, deal, capital, people, risk). Filings marked
-  `!` carry an important 8-K item: earnings results (2.02), an officer change
-  (5.02), an impairment (2.06), a delisting notice (3.01), past financials no
-  longer reliable (4.02), bankruptcy (1.03) or a cyber incident (1.05).
-- **No predictions.** Report what was published. Never say what the stock
-  will do next.
+- **Schlagzeilen sind Hinweise, keine Fakten.** Bevor du dem Nutzer sagst,
+  dass etwas passiert ist, öffne den Artikel oder die Meldung und lies sie.
+  Nenne die Quelle und verlinke sie. Fasse nie einen Artikel hinter einer
+  Bezahlschranke zusammen, den du nicht lesen konntest: Sag, dass er hinter
+  einer Bezahlschranke liegt.
+- **Meldungen schlagen Schlagzeilen.** Widersprechen sich ein 8-K und eine
+  Schlagzeile, gilt das 8-K: Das hat das Unternehmen der SEC mitgeteilt.
+- **Sag, was es betrifft.** Jeder Eintrag listet die betroffenen Ticker (der
+  Feed, aus dem er kam, plus jeder deiner Ticker oder Firmennamen, der darin
+  vorkommt) und Tags (earnings, analyst, legal, deal, capital, people, risk).
+  Mit `!` markierte Meldungen enthalten einen wichtigen 8-K-Punkt:
+  Quartalsergebnisse (2.02), Wechsel in der Führung (5.02), eine
+  Wertminderung (2.06), eine Delisting-Mitteilung (3.01), frühere
+  Abschlüsse nicht mehr verlässlich (4.02), Insolvenz (1.03) oder ein
+  Cybervorfall (1.05).
+- **Keine Prognosen.** Berichte, was veröffentlicht wurde. Sag nie, was die
+  Aktie als Nächstes tun wird.
 
-## Steps
+## Schritte
 
-1. Run the check:
+1. Prüfung ausführen:
 
    ```bash
    python3 "${CLAUDE_SKILL_DIR}/news.py"
    python3 "${CLAUDE_SKILL_DIR}/news.py" --tickers AAPL AXP GOOGL KO BAC --hours 24
    ```
 
-   Exit code 1 means nothing new. `--all` shows items already seen,
-   `--json` gives everything machine-readable, `--dry-run` leaves the state
-   alone.
-2. Read the items that matter: every `!` filing, every item tagged earnings,
-   legal or risk, and anything touching the biggest positions first.
-3. Write a short brief: per ticker, what happened, the source and link, and
-   one line on why it matters to this portfolio (its weight, from
-   `trader/targets.json` or `trader/portfolio.json`).
-4. If a story might change the plan (an 8-K 4.02 restatement, a delisting
-   notice), say so and suggest `/trader-analyst` for the numbers or
-   `/trader-risk` to recheck pending orders. Never act on a headline alone.
+   Exit-Code 1 heißt: nichts Neues. `--all` zeigt schon gesehene Einträge,
+   `--json` gibt alles maschinenlesbar aus, `--dry-run` lässt den Zustand
+   unverändert.
+2. Lies die wichtigen Einträge: jede `!`-Meldung, jeden Eintrag mit dem Tag
+   earnings, legal oder risk, und alles zu den größten Positionen zuerst.
+3. Schreib ein kurzes Briefing: pro Ticker, was passiert ist, Quelle und Link,
+   und eine Zeile, warum es für dieses Portfolio zählt (sein Gewicht, aus
+   `trader/targets.json` oder `trader/portfolio.json`).
+4. Könnte eine Meldung den Plan ändern (eine Bilanzkorrektur nach 8-K 4.02,
+   eine Delisting-Mitteilung), sag es und schlag `/trader-analyst` für die
+   Zahlen vor oder `/trader-risk`, um offene Orders neu zu prüfen. Handle nie
+   allein auf eine Schlagzeile hin.
 
-To run it on a schedule, use `/loop 30m /trader-news` during market hours or
-a scheduled task each morning.
+Für einen Zeitplan: `/loop 30m /trader-news` während der Handelszeiten oder
+eine geplante Aufgabe jeden Morgen.
 
-## Example: the reel's portfolio
+## Beispiel: das Portfolio aus dem Beispiellauf
 
-The user copied Berkshire's top 5 (AAPL, AXP, GOOGL, KO, BAC). On Tuesday
-2026-10-13 the check shows Apple headlines first ("Apple Introduces HomeView
-Smart Home Hub, Other Gadgets", "Judge orders OpenAI to turn over hiring
-records in Apple trade secrets case", tagged legal), Coca-Cola dividend
-pieces, and from SEC: Apple's 8-K of 2026-07-30 (item 2.02, earnings results)
-and Coca-Cola's of 2026-07-28 (2.02). Brief: "Apple (your biggest position,
-30.7%) launched a $299 smart home hub; a court ruling in its trade secrets
-case against OpenAI. No new filings from your five companies this week." When
-a ticker has no news, say so rather than padding the brief.
+Der Nutzer hat Berkshires Top 5 kopiert (AAPL, AXP, GOOGL, KO, BAC). Am
+Dienstag, 13.10.2026, zeigt die Prüfung zuerst Apple-Schlagzeilen („Apple
+Introduces HomeView Smart Home Hub, Other Gadgets“, „Judge orders OpenAI to
+turn over hiring records in Apple trade secrets case“, Tag legal), Artikel zur
+Coca-Cola-Dividende und von der SEC: Apples 8-K vom 30.07.2026 (Punkt 2.02,
+Quartalsergebnisse) und das von Coca-Cola vom 28.07.2026 (2.02). Briefing:
+„Apple (deine größte Position, 30,7 %) hat einen Smart-Home-Hub für 299 $
+vorgestellt; dazu ein Gerichtsbeschluss im Geschäftsgeheimnis-Verfahren gegen
+OpenAI. Diese Woche keine neuen Meldungen deiner fünf Unternehmen.“ Hat ein
+Ticker keine Nachrichten, sag das, statt das Briefing aufzublähen.
 
-## What it never does
+## Was er nie tut
 
-- Never invents or embellishes a story, a quote or a number.
-- Never trades on news, and never tells the user to buy or sell because of a
-  headline.
-- Never hammers a server: one request per feed per ticker, a pause between
-  SEC calls, and SEC's 10 requests a second limit stays far away.
+- Erfindet oder schmückt nie eine Geschichte, ein Zitat oder eine Zahl aus.
+- Handelt nie auf Nachrichten hin und sagt dem Nutzer nie, wegen einer
+  Schlagzeile zu kaufen oder zu verkaufen.
+- Überlastet nie einen Server: eine Anfrage pro Feed und Ticker, eine Pause
+  zwischen SEC-Aufrufen, und die Grenze der SEC von 10 Anfragen pro Sekunde
+  bleibt weit entfernt.
 
-## Safety
+## Sicherheit
 
-Education and tooling, not financial advice. This skill only reads and
-reports. Nothing places an order except `/trader-broker`, after
-`/trader-risk` passes and the user types an explicit yes for that order.
+Bildung und Werkzeuge, keine Anlageberatung. Dieser Skill liest und berichtet
+nur. Nichts platziert eine Order außer `/trader-broker`, nachdem
+`/trader-risk` sie durchgelassen hat und der Nutzer ein ausdrückliches Ja für
+genau diese Order getippt hat.

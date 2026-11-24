@@ -1,113 +1,130 @@
 ---
 name: trader-alerts
 description: >-
-  Price Alerts. Rings when a price target, a stop or the opening bell hits:
-  above / below / stop rules, percent moves from the previous close, and the
-  NYSE opening bell, each ringing once so you are not spammed. Knows NYSE
-  hours with the 2026 and 2027 holidays and 1:00 p.m. early closes, fetches
-  free delayed quotes (Yahoo chart JSON, Stooq CSV) one ticker at a time, and
-  writes trader/prices.json for the other skills. Use when the user says
-  "alert me when", "tell me if AAPL hits", "set a stop", "price target",
-  "watch my stocks", "is the market open", "when does the market open",
-  "get me prices", or to refresh prices before sizing, risk or tax.
-argument-hint: "[ticker] [price]"
+  Kursalarme. Meldet sich, wenn ein Kursziel, ein Stopp oder die
+  Eröffnungsglocke erreicht ist: Regeln für über / unter / Stopp,
+  Prozentbewegungen gegenüber dem Vortagesschluss und die Eröffnungsglocke der
+  NYSE, jede nur einmal, damit kein Spam entsteht. Kennt die Handelszeiten der
+  NYSE mit den Feiertagen 2026 und 2027 und den verkürzten Handelstagen bis
+  13:00 Uhr, holt kostenlose verzögerte Kurse (Yahoo Chart JSON, Stooq CSV)
+  Ticker für Ticker und schreibt trader/prices.json für die anderen Skills.
+  Verwenden, wenn der Nutzer sagt „sag mir Bescheid, wenn“, „melde dich, wenn
+  AAPL X erreicht“, „setz einen Stopp“, „Kursziel“, „beobachte meine Aktien“,
+  „ist die Börse offen“, „wann öffnet die Börse“, „hol mir Kurse“, oder um
+  Preise vor Einteilung, Risiko oder Steuer zu aktualisieren.
+argument-hint: "[Ticker] [Preis]"
 ---
 
 # trader-alerts
 
-Price Alerts watches the numbers so the user does not have to. An alert is
-information, never an order: when a stop rings, nothing is sold. If the user
-wants to act, the normal path runs (size, risk, their yes).
+**Sprache:** Antworte auf Deutsch. Die Tools geben Englisch aus; gib ihre
+Ergebnisse auf Deutsch wieder und lass Ticker, Befehle und Dateinamen
+unverändert. Uhrzeiten der NYSE nennst du in New Yorker Zeit und, wenn es
+hilft, zusätzlich in deutscher Zeit (meist 15:30 bis 22:00 Uhr MEZ/MESZ).
 
-`${CLAUDE_SKILL_DIR}` below is this skill's folder (where this SKILL.md lives).
+Kursalarme beobachten die Zahlen, damit der Nutzer es nicht muss. Ein Alarm
+ist eine Information, nie eine Order: Wenn ein Stopp anschlägt, wird nichts
+verkauft. Will der Nutzer handeln, läuft der normale Weg (Einteilung, Risiko,
+sein Ja).
+
+`${CLAUDE_SKILL_DIR}` unten ist der Ordner dieses Skills (wo diese SKILL.md liegt).
 
 ```bash
-python3 "${CLAUDE_SKILL_DIR}/alerts.py" clock                         # NYSE open or closed, next open
+python3 "${CLAUDE_SKILL_DIR}/alerts.py" clock                         # NYSE offen oder zu, nächste Öffnung
 python3 "${CLAUDE_SKILL_DIR}/alerts.py" quote AAPL KO --write         # -> trader/prices.json
-python3 "${CLAUDE_SKILL_DIR}/alerts.py" quote --holdings --write      # portfolio + targets tickers
+python3 "${CLAUDE_SKILL_DIR}/alerts.py" quote --holdings --write      # Ticker aus Portfolio + Zielen
 python3 "${CLAUDE_SKILL_DIR}/alerts.py" add --symbol AAPL --above 350
-python3 "${CLAUDE_SKILL_DIR}/alerts.py" add --symbol BAC --stop 50 --note "my stop"
+python3 "${CLAUDE_SKILL_DIR}/alerts.py" add --symbol BAC --stop 50 --note "mein Stopp"
 python3 "${CLAUDE_SKILL_DIR}/alerts.py" add --symbol KO --pct 3
 python3 "${CLAUDE_SKILL_DIR}/alerts.py" add --opening-bell
-python3 "${CLAUDE_SKILL_DIR}/alerts.py" check                         # exit 0 = something rang
+python3 "${CLAUDE_SKILL_DIR}/alerts.py" check                         # Exit 0 = etwas hat angeschlagen
 python3 "${CLAUDE_SKILL_DIR}/alerts.py" list
 python3 "${CLAUDE_SKILL_DIR}/alerts.py" reset aapl-above-350
 ```
 
-## What it reads and writes
+## Was er liest und schreibt
 
-| file | what |
+| Datei | Inhalt |
 | --- | --- |
-| `trader/alerts.json` | the rules (`alerts.example.json` in this folder) |
-| `trader/state/alerts.json` | which rules rang and when, so each rings once |
-| `trader/prices.json` | the latest quotes, merged in, for trader-budget, trader-risk, trader-tax and trader-rebalance |
+| `trader/alerts.json` | die Regeln (`alerts.example.json` in diesem Ordner) |
+| `trader/state/alerts.json` | welche Regeln wann angeschlagen haben, damit jede nur einmal anschlägt |
+| `trader/prices.json` | die neuesten Kurse, eingepflegt, für trader-budget, trader-risk, trader-tax und trader-rebalance |
 
-## Rule types
+## Regeltypen
 
-| type | rings when | rings again |
+| Typ | schlägt an, wenn | schlägt erneut an |
 | --- | --- | --- |
-| `above` | price at or above `price` | after `reset`, or on its own if `"rearm": true` and the price fell back |
-| `below` / `stop` | price at or below `price` | same |
-| `pct_move` | moved `pct` percent from the previous close (or `ref`), optional `direction` up or down | once per day at most |
-| `opening_bell` | the NYSE is open | once per trading day |
+| `above` | Kurs bei oder über `price` | nach `reset`, oder von selbst bei `"rearm": true`, wenn der Kurs wieder gefallen ist |
+| `below` / `stop` | Kurs bei oder unter `price` | genauso |
+| `pct_move` | um `pct` Prozent vom Vortagesschluss (oder `ref`) bewegt, optional `direction` up oder down | höchstens einmal am Tag |
+| `opening_bell` | die NYSE ist offen | einmal pro Handelstag |
 
-## Quotes
+## Kurse
 
-- `yahoo` (default): `query1.finance.yahoo.com/v8/finance/chart/<TICKER>`, an
-  unofficial free JSON endpoint, one request per ticker, half a second apart.
-- `stooq`: `stooq.com/q/l/?s=aapl.us&f=sd2t2ohlcv&h&e=csv`, Stooq's free CSV.
-  It answered 404 when this was written (2026-10-13); the parser stays for
-  when it is back. Use `--source stooq` to try it.
-- Free quotes are delayed. They are fine for alerts and for checking sizes,
-  not for timing an order. The broker's price is the one that fills.
-- If both are down, read prices from the broker connector (Alpaca
-  `get_stock_snapshot`, IBKR `get_price_snapshot`) and write them into
-  `trader/prices.json` as `{"as_of": "...", "prices": {"AAPL": 341.27}}`.
+- `yahoo` (Standard): `query1.finance.yahoo.com/v8/finance/chart/<TICKER>`,
+  ein inoffizieller kostenloser JSON-Endpunkt, eine Anfrage pro Ticker, im
+  Abstand von einer halben Sekunde.
+- `stooq`: `stooq.com/q/l/?s=aapl.us&f=sd2t2ohlcv&h&e=csv`, Stooqs kostenlose
+  CSV. Sie antwortete beim Schreiben (13.10.2026) mit 404; der Parser bleibt
+  für den Fall, dass sie zurückkommt. Mit `--source stooq` ausprobieren.
+- Kostenlose Kurse sind verzögert. Sie reichen für Alarme und zum Prüfen von
+  Größen, nicht zum Timen einer Order. Der Kurs des Brokers ist der, zu dem
+  ausgeführt wird.
+- Sind beide ausgefallen, Kurse aus dem Broker-Connector lesen (Alpaca
+  `get_stock_snapshot`, IBKR `get_price_snapshot`) und in `trader/prices.json`
+  schreiben als `{"as_of": "...", "prices": {"AAPL": 341.27}}`.
 
-## The NYSE clock
+## Die NYSE-Uhr
 
-Regular session 9:30 a.m. to 4:00 p.m. New York time, closed on weekends and
-on these holidays, from nyse.com/markets/hours-calendars (read 2026-10-13):
+Reguläre Sitzung 9:30 bis 16:00 Uhr New Yorker Zeit, geschlossen an
+Wochenenden und an diesen Feiertagen, laut nyse.com/markets/hours-calendars
+(gelesen am 13.10.2026):
 
-- 2026: Jan 1, Jan 19, Feb 16, Apr 3 (Good Friday), May 25, Jun 19, Jul 3
-  (Independence Day observed), Sep 7, Nov 26, Dec 25. Early close 1:00 p.m. on
-  Nov 27 and Dec 24.
-- 2027: Jan 1, Jan 18, Feb 15, Mar 26 (Good Friday), May 31, Jun 18
-  (Juneteenth observed), Jul 5 (Independence Day observed), Sep 6, Nov 25,
-  Dec 24 (Christmas observed). Early close 1:00 p.m. on Nov 26.
+- 2026: 1. Jan., 19. Jan., 16. Feb., 3. Apr. (Karfreitag), 25. Mai, 19. Juni,
+  3. Juli (Independence Day, nachgeholt), 7. Sep., 26. Nov., 25. Dez. Früher
+  Schluss um 13:00 Uhr am 27. Nov. und 24. Dez.
+- 2027: 1. Jan., 18. Jan., 15. Feb., 26. März (Karfreitag), 31. Mai, 18. Juni
+  (Juneteenth, nachgeholt), 5. Juli (Independence Day, nachgeholt), 6. Sep.,
+  25. Nov., 24. Dez. (Weihnachten, nachgeholt). Früher Schluss um 13:00 Uhr am
+  26. Nov.
 
-Daylight saving time is worked out in the tool, so it needs no time zone
-files. For any other year it says the holiday list is unknown.
+Die Sommerzeit berechnet das Tool selbst, es braucht also keine
+Zeitzonendateien. Für jedes andere Jahr sagt es, dass die Feiertagsliste
+unbekannt ist.
 
-## Steps
+## Schritte
 
-1. Ask what to watch, in the user's words ("tell me if Apple drops under
-   $320"), and add the rule. Confirm it back: ticker, type, level.
-2. Run `check` now, and on a schedule if the user wants (a Claude scheduled
-   task or cron, every 15 minutes in market hours is plenty). Each run fetches
-   only the tickers in the rules and rings each alert once.
-3. Tell the user what rang in one line each. If they want to act, send them
-   to sizing and `/trader-risk`. Never act for them.
+1. Frag, was beobachtet werden soll, in den Worten des Nutzers („sag mir
+   Bescheid, wenn Apple unter 320 $ fällt“), und füge die Regel hinzu.
+   Bestätige sie: Ticker, Typ, Marke.
+2. Führ `check` jetzt aus und, wenn der Nutzer will, nach Zeitplan (eine
+   geplante Aufgabe in Claude oder cron, alle 15 Minuten während der
+   Handelszeiten reicht völlig). Jeder Lauf holt nur die Ticker aus den Regeln
+   und lässt jeden Alarm einmal anschlagen.
+3. Sag dem Nutzer in je einer Zeile, was angeschlagen hat. Will er handeln,
+   schick ihn zur Einteilung und zu `/trader-risk`. Handle nie für ihn.
 
-## Example: the reel's portfolio
+## Beispiel: das Portfolio aus dem Beispiellauf
 
-After the copy portfolio is bought, `add --opening-bell`, `add --symbol AAPL
---above 350`, and `add --symbol BAC --stop 50`. On 2026-10-13 AAPL closed at
-$341.27 and BAC at $53.96, so `check` that evening prints "Nothing hit" and
-exits 1. At 9:30 the next morning the opening bell rings once.
+Nachdem das Kopie-Portfolio gekauft ist: `add --opening-bell`, `add --symbol
+AAPL --above 350` und `add --symbol BAC --stop 50`. Am 13.10.2026 schloss AAPL
+bei 341,27 $ und BAC bei 53,96 $, also gibt `check` an diesem Abend „Nothing
+hit“ aus (nichts erreicht) und endet mit Exit-Code 1. Um 9:30 Uhr am nächsten
+Morgen schlägt die Eröffnungsglocke einmal an.
 
-## What it never does
+## Was er nie tut
 
-It never places, cancels or changes an order, never claims a quote is
-real time, and never predicts where a price is going.
+Er platziert, storniert oder ändert nie eine Order, behauptet nie, ein Kurs
+sei in Echtzeit, und sagt nie voraus, wohin ein Kurs geht.
 
-## Safety
+## Sicherheit
 
-- Education and tooling, not financial advice. An alert is a fact about a price, not a signal to trade.
-- Paper trading by default (`"paper": true`). Going live is the user's own decision, in their own config.
-- Nothing in this pack places an order except trader-broker, and only when all three hold: trader-risk
-  passed that exact order today, the user typed an explicit yes for that one order in the chat, and the
-  user clicked Allow once on Claude's own card because the order tool is set to "Needs approval"
-  (Customize > Connectors > tool permissions). Never set an order tool to "Always allow".
-- No options, margin, short selling or leverage unless the config allows it and the user confirms.
-- Broker keys live in environment variables or the Claude Desktop config, never in the chat.
+- Bildung und Werkzeuge, keine Anlageberatung. Ein Alarm ist eine Tatsache über einen Kurs, kein Handelssignal.
+- Standardmäßig Paper Trading (`"paper": true`). Live zu gehen ist allein die Entscheidung des Nutzers, in seiner eigenen Config.
+- Nichts in diesem Paket platziert eine Order außer trader-broker, und nur wenn alle drei Bedingungen
+  erfüllt sind: trader-risk hat genau diese Order heute durchgelassen, der Nutzer hat im Chat ein
+  ausdrückliches Ja für genau diese eine Order getippt, und der Nutzer hat auf Claudes eigener Karte
+  „Allow once“ geklickt, weil das Order-Tool auf „Needs approval“ steht (Customize > Connectors >
+  Tool-Berechtigungen). Ein Order-Tool nie auf „Always allow“ stellen.
+- Keine Optionen, kein Margin, keine Leerverkäufe und kein Hebel, außer die Config erlaubt es und der Nutzer bestätigt.
+- Broker-Schlüssel liegen in Umgebungsvariablen oder der Claude-Desktop-Config, niemals im Chat.
