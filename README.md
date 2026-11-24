@@ -22,7 +22,7 @@ Standard.
 Füge das in Claude ein:
 
 ```
-https://github.com/Jakeschincariol/trader-skill
+https://github.com/ftmielke-afk/trader-skill
 
 install skill
 ```
@@ -30,7 +30,7 @@ install skill
 Oder als Plugin in Claude Code:
 
 ```
-/plugin marketplace add Jakeschincariol/trader-skill
+/plugin marketplace add ftmielke-afk/trader-skill
 /plugin install trader-skill@trader-skill
 ```
 
@@ -39,7 +39,7 @@ installiert heißen sie also `/trader-skill:trader-copycat` und so weiter.
 Kopiere stattdessen die Ordner, wenn du schlicht `/trader-copycat` willst:
 
 ```bash
-git clone https://github.com/Jakeschincariol/trader-skill.git
+git clone https://github.com/ftmielke-afk/trader-skill.git
 cp -r trader-skill/trader-* ~/.claude/skills/
 ```
 
@@ -201,4 +201,6 @@ trader-rebalance/  SKILL.md, rebalance.py
 tests/             unittest-Suite + Offline-Fixtures
 ```
 
-MIT. Erstellt von [Jake Schincariol](https://opusjake.ai).
+MIT. Erstellt von [Jake Schincariol](https://opusjake.ai). Deutsche Fassung von
+[ftmielke-afk](https://github.com/ftmielke-afk); das englische Original liegt unter
+[Jakeschincariol/trader-skill](https://github.com/Jakeschincariol/trader-skill).

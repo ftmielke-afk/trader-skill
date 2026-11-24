@@ -3,8 +3,8 @@
   "name": "trader-skill",
   "description": "Das Trader-Skill-Paket für Claude",
   "owner": {
-    "name": "Jake Schincariol",
-    "url": "https://opusjake.ai"
+    "name": "ftmielke-afk",
+    "url": "https://github.com/ftmielke-afk"
   },
   "plugins": [
     {
@@ -12,7 +12,7 @@
       "description": "Elf Claude-Skills fürs Investieren: die 13F eines berühmten Investors kopieren, die Nachrichten beobachten, Trades nach dem Budget einteilen, die Aktien-Offenlegungen des Kongresses verfolgen, Quartalszahlen lesen, screenen, Risiko prüfen, freigegebene Orders platzieren, Verluste steuerlich nutzen, Kursalarme und Rebalancing.",
       "source": "./",
       "category": "productivity",
-      "homepage": "https://github.com/Jakeschincariol/trader-skill"
+      "homepage": "https://github.com/ftmielke-afk/trader-skill"
     }
   ]
 }
