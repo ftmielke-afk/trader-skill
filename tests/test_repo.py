@@ -7,8 +7,8 @@ from _load import ROOT
 
 SKILLS = ["trader-copycat", "trader-news", "trader-budget", "trader-pelosi", "trader-analyst",
           "trader-screener", "trader-risk", "trader-broker", "trader-tax", "trader-alerts",
-          "trader-rebalance"]
-ABOUT = ("11 Claude-Skills, die die Investoren kopieren, denen du vertraust, die Nachrichten und den "
+          "trader-rebalance", "trader-daytrade"]
+ABOUT = ("12 Claude-Skills, die die Investoren kopieren, denen du vertraust, die Nachrichten und den "
          "Kongress beobachten, jeden Trade an dein Budget anpassen und nie eine Order ohne dein Ja platzieren.")
 # skills that can lead to an order carry the safety block
 ORDER_PATH = ["trader-copycat", "trader-budget", "trader-pelosi", "trader-risk", "trader-broker",

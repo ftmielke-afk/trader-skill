@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "trader-skill",
-      "description": "Elf Claude-Skills fürs Investieren: die 13F eines berühmten Investors kopieren, die Nachrichten beobachten, Trades nach dem Budget einteilen, die Aktien-Offenlegungen des Kongresses verfolgen, Quartalszahlen lesen, screenen, Risiko prüfen, freigegebene Orders platzieren, Verluste steuerlich nutzen, Kursalarme und Rebalancing.",
+      "description": "Zwölf Claude-Skills fürs Investieren: die 13F eines berühmten Investors kopieren, die Nachrichten beobachten, Trades nach dem Budget einteilen, die Aktien-Offenlegungen des Kongresses verfolgen, Quartalszahlen lesen, screenen, Risiko prüfen, freigegebene Orders platzieren, Verluste steuerlich nutzen, Kursalarme, Rebalancing und Daytrading-Risiko mit Trade-Journal.",
       "source": "./",
       "category": "productivity",
       "homepage": "https://github.com/ftmielke-afk/trader-skill"

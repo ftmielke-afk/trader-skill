@@ -1,6 +1,6 @@
 # Der Trader-Skill
 
-11 Claude-Skills, die die Investoren kopieren, denen du vertraust, die Nachrichten und den Kongress beobachten, jeden Trade an dein Budget anpassen und nie eine Order ohne dein Ja platzieren.
+12 Claude-Skills, die die Investoren kopieren, denen du vertraust, die Nachrichten und den Kongress beobachten, jeden Trade an dein Budget anpassen und nie eine Order ohne dein Ja platzieren.
 
 Kostenlos, MIT-Lizenz, keine Anmeldung, kein API-Schlüssel. Die Tools sind
 schlichtes Python und lesen öffentliche Daten: SEC EDGAR, den House Clerk,
@@ -56,7 +56,7 @@ oder in die Umgebungsvariable `SEC_USER_AGENT`.
 Die Python-Tools geben ihre Ergebnisse auf Englisch aus. Die Skills weisen
 Claude an, dir alles auf Deutsch zu erklären.
 
-## Die elf
+## Die zwölf
 
 | Befehl | Aufgabe | was er tut |
 | --- | --- | --- |
@@ -71,6 +71,7 @@ Claude an, dir alles auf Deutsch zu erklären.
 | `/trader-tax` | Steuer-Optimierer | Verfolgt Kaufposten (Lots) mit Einstandskosten, Gewinne und Verluste, Kandidaten für Tax-Loss-Harvesting und Wash Sales. |
 | `/trader-alerts` | Kursalarme | Meldet sich, wenn ein Kursziel, ein Stopp oder die Eröffnungsglocke erreicht ist, mit dem echten NYSE-Kalender. |
 | `/trader-rebalance` | Rebalancer | Bringt das Portfolio auf seine Zielgewichte zurück, wenn es über deine Bandbreite hinaus abweicht. |
+| `/trader-daytrade` | Daytrading-Risiko | Stückzahl aus Einstieg, Stopp und 1 % Risiko, harter Tages-Stopp und ein Trade-Journal mit Auswertung pro Setup. Für Aktien bei Trade Republic (1 € pro Order), ohne Internet, auch in der iPhone-App. |
 
 ## So benutzt du es
 
@@ -82,6 +83,7 @@ copycat -> budget -> risk -> broker            (einen Investor kopieren)
 news / pelosi / alerts                          (beobachten, nach Zeitplan)
 analyst -> screener -> budget -> risk -> broker (selbst auswählen)
 rebalance / tax -> risk -> broker               (pflegen)
+daytrade                                        (Daytrading: Größe, Tages-Stopp, Journal)
 ```
 
 Ein Beispiel: Berkshire Hathaway mit 5.000 $ kopieren.
@@ -134,6 +136,7 @@ python3 trader-broker/ticket.py show                                   # die Tic
 python3 trader-tax/lots.py harvest --min-loss 100                      # mit Wash-Sale-Prüfung
 python3 trader-alerts/alerts.py clock                                  # NYSE offen oder geschlossen
 python3 trader-rebalance/rebalance.py --band 5                         # die Abweichungstabelle
+python3 trader-daytrade/daytrade.py size --entry 52.40 --stop 51.80     # Stückzahl nach Stopp
 ```
 
 ```bash
@@ -198,6 +201,7 @@ trader-broker/     SKILL.md, ticket.py, claude_desktop_config.example.json
 trader-tax/        SKILL.md, lots.py, portfolio.example.json
 trader-alerts/     SKILL.md, alerts.py, alerts.example.json
 trader-rebalance/  SKILL.md, rebalance.py
+trader-daytrade/   SKILL.md, daytrade.py, daytrade.example.json
 tests/             unittest-Suite + Offline-Fixtures
 ```
 

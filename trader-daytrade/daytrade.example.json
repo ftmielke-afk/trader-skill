@@ -1,0 +1,10 @@
+{
+  "konto": 5000,
+  "risiko_pct": 1,
+  "tagesverlust_pct": 3,
+  "tagesverlust_eur": null,
+  "max_trades_tag": 5,
+  "max_verluste_folge": 3,
+  "max_position_pct": 25,
+  "gebuehr": 1
+}
